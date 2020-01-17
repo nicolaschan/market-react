@@ -18,6 +18,9 @@ use pwned::api::*;
 use market_server::connection::DbConn;
 use market_server::models::users;
 use market_server::models::users::User;
+use market_server::models::transactions;
+use market_server::models::transactions::Transaction;
+use market_server::models::transactions::InsertableTransaction;
 
 #[derive(Serialize, Deserialize)]
 pub struct StatusResponse {
@@ -27,7 +30,7 @@ pub struct StatusResponse {
 
 #[get("/")]
 fn index() -> &'static str {
-    "Hello, world!"
+    "Market API"
 }
 
 #[get("/users")]
@@ -58,22 +61,46 @@ struct PostUser {
 #[post("/users", data = "<input>")]
 fn create_user(input: Json<PostUser>, conn: MarketDbConn) -> Result<status::Created<Json<User>>, status::Custom<String>> {
     let post_user = input.into_inner();
-    let user = match User::new(post_user.username, post_user.bankid, post_user.password) {
-        Ok(user) => user,
-        Err(_) => return Err(status::Custom(Status::ImATeapot, "hi".to_string()))
-    };
+    let user = User::new(post_user.username, post_user.bankid, post_user.password).unwrap(); 
     users::insert(user.clone(), &conn)
         .map(|_| user_created(user))
-        .map_err(|_| status::Custom(Status::ImATeapot, "hi".to_string()))
+        .map_err(|err| status::Custom(Status::ImATeapot, format!("{:?}", err)))
 }
 
-#[get("/passwords/<password>")]
+#[get("/pwned_passwords/<password>")]
 fn check_pwned_password(password: &RawStr) -> Json<bool> {
     let pwned = PwnedBuilder::default().build().unwrap();
     match pwned.check_password(password.to_string()) {
         Ok(pwd) => Json(pwd.found),
         Err(_e) => Json(false)
     }
+}
+
+fn transaction_created(transaction: Transaction) -> status::Created<Json<Transaction>> {
+    status::Created(
+        format!("/transactions/{id}", id = transaction.id).to_string(),
+        Some(Json(transaction)))
+}
+
+
+#[post("/transactions", data = "<input>")]
+fn create_transaction(input: Json<InsertableTransaction>, conn: MarketDbConn) -> Result<status::Created<Json<Transaction>>, status::Custom<String>> {
+    let transaction = input.into_inner();
+    transactions::insert(&transaction, &conn)
+        .map(|res| transaction_created(res))
+        .map_err(|err| status::Custom(Status::ImATeapot, format!("{:?}", err)))
+}
+
+#[get("/transactions/<id>")]
+fn get_transaction_by_id(id: i32, conn: MarketDbConn) -> Result<Json<Transaction>, status::NotFound<()>> {
+    transactions::get(id, &conn)
+        .map(Json)
+        .map_err(|_| status::NotFound(()))
+}
+
+#[get("/transactions")]
+fn get_all_transactions(conn: MarketDbConn) -> Json<Vec<Transaction>> {
+    transactions::all(&conn).map(|t| Json(t)).unwrap_or(Json(Vec::new()))
 }
 
 #[catch(404)]
@@ -88,7 +115,15 @@ fn main() {
     rocket::ignite()
         .attach(MarketDbConn::fairing())
         .mount("/", StaticFiles::from("../build"))
-        .mount("/api/v1/", routes![index, create_user, get_user_by_bankid, get_all_users, check_pwned_password])
+        .mount("/api/v1/", routes![
+               index, 
+               create_user, 
+               get_user_by_bankid, 
+               get_all_users, 
+               create_transaction,
+               get_transaction_by_id,
+               get_all_transactions,
+               check_pwned_password])
         .register(catchers![not_found])
         .launch();
 }

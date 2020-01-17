@@ -19,6 +19,7 @@ import FormControl from 'react-bootstrap/FormControl'
 import Spinner from 'react-bootstrap/Spinner'
 import { connect } from 'react-redux'
 import axios from 'axios'
+import { withRouter } from 'react-router-dom'
 
 class LoginPage extends React.Component {
   constructor (props) {
@@ -77,7 +78,7 @@ class LoginPage extends React.Component {
 	    message: 'Great!',
 	 }}}))
       case 'password':
-	return fetch(`/api/v1/passwords/${value}`)
+	return fetch(`/api/v1/pwned_passwords/${value}`)
 	  .then(resp => resp.json())
 	  .then(result => this.state.user[name] === value && this.setState({ validation: { ...validation, [name]: {
 	     state: result ? 'invalid' : 'valid',
@@ -88,15 +89,15 @@ class LoginPage extends React.Component {
 
   handleSubmit (event) {
     event.preventDefault()
-    return fetch('/api/v1/users', {
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-	username: this.state.user.username,
-	bankid: this.state.user.bankid,
-	password: this.state.user.password
-      })
+    axios.post('/api/v1/users', {
+      username: this.state.user.username,
+      bankid: this.state.user.bankid,
+      password: this.state.user.password
     })
+    .then(res => {
+      this.props.history.push('/login')
+    })
+    .catch(console.log)
   }
 
   render () {
@@ -178,4 +179,4 @@ const actionCreators = {
 }
 
 const connectedLoginPage = connect(mapState, actionCreators)(LoginPage);
-export default connectedLoginPage
+export default withRouter(connectedLoginPage)

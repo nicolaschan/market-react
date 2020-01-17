@@ -39,7 +39,7 @@ class LoginPage extends React.Component {
 	        <InputGroup.Prepend>
 	          <InputGroup.Text id="bank-id-prepend">#</InputGroup.Text>
 	        </InputGroup.Prepend>
-	        <Form.Control type="text" name="bankid" placeholder="Bank ID" aria-described-by="bank-id-prepend" maxlength={24} />
+	        <Form.Control type="text" name="bankid" placeholder="Bank ID" aria-described-by="bank-id-prepend" maxlength={24} autoFocus />
 	    </InputGroup>
 	    </Form.Group>
 	    <Form.Group controlId="formBasicEmail">

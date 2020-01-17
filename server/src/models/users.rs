@@ -3,7 +3,7 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use super::super::schema::users;
 
-#[derive(Clone, Serialize, Deserialize, AsChangeset, Queryable)]
+#[derive(Clone, Debug, Serialize, Deserialize, AsChangeset, Queryable)]
 pub struct User {
     pub bankid: String,
     pub bankid_lower: String,
